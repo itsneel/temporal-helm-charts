@@ -33,26 +33,18 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - name: Generate token
-        id: generate_token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.TEMPORAL_CICD_APP_ID }}
-          private-key: ${{ secrets.TEMPORAL_CICD_PRIVATE_KEY }}
 
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          persist-credentials: true
-          token: ${{ steps.generate_token.outputs.token }}
           fetch-depth: 0
           fetch-tags: true
 
       - name: Configure Git
         run: |
-          git config --local user.name 'Temporal Data'
-          git config --local user.email 'commander-data@temporal.io'
-        
+          git config --local user.name 'Neelanshu Goyal'
+          git config --local user.email 'itsneel@users.noreply.github.com'
+
       - name: Bump Temporal chart version
         id: chart-version
         working-directory: charts/temporal
@@ -76,9 +68,9 @@ jobs:
             fi
             CHART_VERSION="$MAJOR.$MINOR.$PATCH"
           fi
-          
+
           echo "chart_version=$CHART_VERSION" >> "$GITHUB_OUTPUT"
-  
+
       - name: Update image tags
         uses: mikefarah/yq@v4
         with:
@@ -93,14 +85,15 @@ jobs:
           cmd: |
             yq -i '.appVersion = "${{ github.event.inputs.server_version }}"' charts/temporal/Chart.yaml
             yq -i '.version = "${{ steps.chart-version.outputs.chart_version }}"' charts/temporal/Chart.yaml
-    
+
       - name: Commit changes
         working-directory: charts/temporal
         run: |
+          # git remote set-url origin https://${{ secrets.PAT }}@github.com/$GITHUB_REPOSITORY
           git commit -m "Update Chart to ${{ steps.chart-version.outputs.chart_version }}." Chart.yaml values.yaml
           git tag -a "temporal-${{ steps.chart-version.outputs.chart_version }}" -m "Release Chart: ${{ steps.chart-version.outputs.chart_version }}"
 
-          git push --tags origin main
+          git push --tags origin master
 
       - name: Install Helm
         uses: azure/setup-helm@v3
@@ -117,4 +110,4 @@ jobs:
         with:
           mark_as_latest: "${{ github.event.inputs.mark_latest }}"
         env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          CR_TOKEN: "${{ secrets.PAT }}"
